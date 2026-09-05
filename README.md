@@ -10,7 +10,7 @@ driven by the byte-verified charger protocol.
 Protocol ground truth is byte-verified against the original APK
 (`com/graupner/chargerm/model/Operator`), including the frame layout,
 byte-sum checksum, and command codes. See `protocol.py` docstring and
-`tests/test_protocol.py`.
+`tests/test_protocol_frames.py`.
 
 ## Layout
 - `main.py` — entry point: `python main.py` (GUI) or `python main.py --screenshot`
@@ -20,17 +20,27 @@ byte-sum checksum, and command codes. See `protocol.py` docstring and
 - `chargerlink.spec` + `build_linux.sh` / `build_windows.ps1` — packaging
 - `tests/` — byte-level protocol tests (pytest)
 
-## Install (dev)
-```bash
-python -m venv .venv
-.venv/bin/pip install -r requirements.txt   # PySide6
-.venv/bin/pip install pytest pytest-qt      # for tests
-```
-
 ## Run
 ```bash
 python main.py                  # GUI (needs a charger on the network)
-python main.py --screenshot     # render all screens to ./screenshots_out/
+python main.py --screenshot     # render all screens to ./screens/
+```
+
+### Windows (no exe — run from source, Python 3.10+)
+```bat
+:: from the repo root:
+run_windows.bat                 :: checks Python, pip-installs PySide6, launches
+:: or by hand:
+python -m pip install -r requirements.txt
+python main.py
+```
+`run_windows.bat` is the easiest path: it verifies Python is on PATH,
+installs `PySide6` from `requirements.txt`, then starts `main.py`.
+
+### macOS / Linux (dev)
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt   # PySide6
 ```
 
 ## Tests
@@ -59,5 +69,5 @@ on any Windows box with no Python installed.
 ## Notes
 - The asset bundle (`assets/`) is resolved both in dev and in a frozen bundle
   (`assets.py` handles `sys.frozen` + PyInstaller `_internal`).
-- The app talks to the charger's own WiFi AP (default `192.168.4.1`, TCP 23)
+- The app talks to the charger's own WiFi AP (default `192.168.4.1`, TCP 80)
   and via HTTP discovery on `http://192.168.4.1`.
