@@ -140,28 +140,79 @@ class ChargerClient:
         self.host = host
         self.port = int(port)
 
-    def http_status(self, timeout=2.0):
-        """GET /status -> (ssid, password, channel) or None. Discovery helper."""
+    def http_status(self, host=None, timeout=2.0):
+        """GET /status -> {'ssid','password','channel'} or None. Discovery helper."""
+        return self._probe_http(host or self.host, timeout=timeout)
+
+    def _probe_http(self, host, timeout=2.0):
         import urllib.request
         try:
-            req = urllib.request.Request(self._status_url(host=self.host),
-                                         timeout=timeout)
+            req = urllib.request.Request(self._status_url(host=host))
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 txt = r.read().decode('utf-8', 'replace').strip()
             self._log('HTTP /status -> %r' % txt)
-            parts = [p.strip() for p in txt.split('|')]
-            if len(parts) >= 3:
-                try:
-                    ch = int(parts[2])
-                except ValueError:
-                    ch = 0
-                return {'ssid': parts[0], 'password': parts[1], 'channel': ch}
+            return self._parse_status(txt)
         except Exception as e:
             self._log('HTTP /status failed: %s' % e)
         return None
 
+    # ---- pre-connect verification ---------------------------------------------
+    def probe(self, host=None, port=None, timeout=3.0):
+        """Verify the charger actually answers *before* the GUI shows
+        "connected" / switches to the main screen.
+
+        Two independent checks against the charger's AP:
+          * TCP connect to the socket transport (host:port)
+          * HTTP GET /status  (SSID / password / channel discovery)
+
+        Returns dict(ok, tcp, http, info, host, port, detail):
+        * ok    — True iff at least one check got a response
+        * info  — /status dict when HTTP answered, else None
+        * detail— human-readable reason when not ok
+        """
+        host = host or self.host
+        port = int(port or self.port)
+        res = {'ok': False, 'tcp': False, 'http': False, 'info': None,
+               'host': host, 'port': port, 'detail': ''}
+
+        try:
+            s = socket.create_connection((host, port), timeout=timeout)
+            s.close()
+            res['tcp'] = True
+        except OSError as e:
+            res['detail'] = 'TCP %s:%d unreachable (%s)' % (host, port, e.__class__.__name__)
+
+        info = self._probe_http(host, timeout=min(timeout, 2.0))
+        if info:
+            res['http'] = True
+            res['info'] = info
+
+        res['ok'] = bool(res['tcp'] or res['http'])
+        if not res['ok'] and not res['detail']:
+            res['detail'] = 'no TCP or HTTP response from %s:%d' % (host, port)
+        self._log('probe %s:%s tcp=%s http=%s ok=%s' %
+                  (host, port, res['tcp'], res['http'], res['ok']))
+        return res
+
     def _status_url(self, host=None):
         return 'http://%s/status' % (host or self.host)
+
+    @staticmethod
+    def _parse_status(txt):
+        """Parse a /status body 'ssid|password|channel' -> dict, else None.
+
+        Pure function (no I/O) so it is unit-testable without a real charger.
+        """
+        if not txt:
+            return None
+        parts = [p.strip() for p in txt.split('|')]
+        if len(parts) < 3:
+            return None
+        try:
+            ch = int(parts[2])
+        except ValueError:
+            ch = 0
+        return {'ssid': parts[0], 'password': parts[1], 'channel': ch}
 
     # ---- frame building (verified layout) -----------------------------------
     def build_info_request(self, action=ACTION_READ, command=CMD_INFO):

@@ -58,6 +58,7 @@ class App(QWidget):
         self.statusbar = StatusBar()
         self.intro = IntroScreen(self.client, self.statusbar)
         self.intro.connect_ready.connect(self._go_main)
+        self.intro.connect_failed.connect(self._on_connect_failed)
 
         self.main = MainView(self.client, self)
         self.stack = QStackedWidget()
@@ -100,10 +101,22 @@ class App(QWidget):
         except Exception:
             pass
 
-    def _go_main(self):
+    def _go_main(self, res=None):
+        """Only called when the connect probe succeeded (res = probe dict)."""
+        info = res if isinstance(res, dict) else {}
+        host = info.get('host') or self.client.host
+        port = int(info.get('port') or self.client.port)
+        self.client.set_endpoint(host, port)
+        self.intro.set_busy(False)
         self.client.start()
         self.stack.setCurrentWidget(self.main)
-        self.statusbar.set_connected(True, self.client.host)
+        self.statusbar.set_connected(True, host)
+
+    def _on_connect_failed(self, detail):
+        """Probe failed: stay on the intro screen, show why (red flash)."""
+        self.intro.set_busy(False)
+        self.statusbar.set_connected(False)
+        self.statusbar.flash('Not connected — %s' % detail, 'error')
 
     def closeEvent(self, e):
         try:

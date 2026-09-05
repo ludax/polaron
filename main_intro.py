@@ -64,8 +64,17 @@ class StatusBar(QWidget):
 
 # ---------------------------------------------------------------- intro view
 class IntroScreen(QWidget):
-    """Connect screen: logo, WiFi info, host/port, big Connect button."""
-    connect_ready = Signal()
+    """Connect screen: logo, WiFi info, host/port, big Connect button.
+
+    Connect is VERIFIED before anything else happens: `_on_connect` runs
+    `client.probe(host, port)` on a worker thread (TCP connect + HTTP
+    /status). Only a positive probe emits `connect_ready(res)`; a failed
+    probe emits `connect_failed(reason)` and the user stays on this screen
+    with a red status flash. Never show "connected" green without a
+    real response from the charger.
+    """
+    connect_ready = Signal(object)   # res dict from client.probe() when ok
+    connect_failed = Signal(str)     # human-readable reason
 
     def __init__(self, client, status, parent=None):
         super().__init__(parent)
@@ -155,6 +164,22 @@ class IntroScreen(QWidget):
             port = int(self.port_edit.text().strip() or P.DEFAULT_PORT)
         except ValueError:
             port = P.DEFAULT_PORT
-        self.client.set_endpoint(host, port)
-        self.status.set_connected(True, host)
-        self.connect_ready.emit()
+        if self.connect_btn.isEnabled():
+            self.set_busy(True)
+            self.status.set_text('Connecting to %s …' % host)
+            import threading
+            def worker():
+                res = self.client.probe(host, port)
+                if res['ok']:
+                    if res.get('info'):
+                        self.ssid_update.emit(res['info'])
+                    self.connect_ready.emit(res)
+                else:
+                    self.connect_failed.emit(
+                        res.get('detail') or ('no response from %s:%d' % (host, port)))
+            threading.Thread(target=worker, daemon=True).start()
+
+    def set_busy(self, on):
+        """Disable/enable the Connect button while the probe is in flight."""
+        self.connect_btn.setEnabled(not on)
+        self.connect_btn.set_label('Connecting…' if on else 'Connect')
