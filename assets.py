@@ -5,11 +5,32 @@ for maximum visual fidelity. Falls back to a drawn placeholder if an image
 is missing so the app still runs.
 """
 import os
+import sys
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QBrush
 from PySide6.QtCore import Qt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.join(HERE, 'assets')
+
+
+def _resolve_assets_dir():
+    """Locate assets/ both in dev and in a frozen PyInstaller onedir bundle.
+
+    Non-frozen:  <repo>/assets  (next to this module).
+    Frozen: PyInstaller places --add-data('assets', 'assets') payload
+            next to the executable (Linux) or inside <appdir>/_internal
+            (Windows, PyInstaller 6+).
+    """
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+        for cand in (os.path.join(base, 'assets'),
+                     os.path.join(base, '_internal', 'assets')):
+            if os.path.isdir(cand):
+                return cand
+        return os.path.join(base, 'assets')
+    return os.path.join(HERE, 'assets')
+
+
+ASSETS = _resolve_assets_dir()
 
 # Map logical button names to the real APK image files.
 PAIRS = {

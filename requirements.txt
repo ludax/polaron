@@ -1,0 +1,14 @@
+# Charger Link — runtime dependencies (all OSes)
+PySide6>=6.6,<7
+
+# ---------------------------------------------------------------------------
+# Optional dev extras (not installed by default).
+# Either install the dev extra from pyproject.toml:
+#     pip install -e ".[dev]"
+# or install them directly:
+#     pip install pytest pytest-qt pyinstaller
+#
+#   pytest>=8
+#   pytest-qt>=4
+#   pyinstaller>=6
+# ---------------------------------------------------------------------------

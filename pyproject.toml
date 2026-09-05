@@ -1,0 +1,20 @@
+[project]
+name = "chargelink"
+version = "1.1.0"
+description = "Cross-OS desktop rebuild of Graupner 'Charger Link' for Polaron/Graupner chargers (PySide6)."
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6>=6.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-qt>=4",
+    "pyinstaller>=6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

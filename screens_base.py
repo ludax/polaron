@@ -6,26 +6,44 @@ from PySide6.QtWidgets import (
 )
 import assets as A
 import widgets as W
+from sizing import scale, ACTION_BTN, ACTION_GAP
+
+
+def _screen_w(widget, default=560):
+    """Top-level window width (screens are parentless at construction,
+    so prefer the app window, which is setFixedSize'd)."""
+    app = getattr(widget, 'app', None)
+    if app is not None:
+        w = app.width()
+        if w >= 100:
+            return w
+    top = widget
+    while top.parent() is not None:
+        top = top.parent()
+    return max(top.width(), default if top.width() < 100 else top.width())
 
 
 class ActionRow(QWidget):
-    """The big Start / Stop round button pair shown on control screens."""
+    """Start / Stop round button pair (APK charge.xml: 45dip buttons,
+    3dip margins, in a bottom bar under the property list)."""
 
     started = Signal()
     stopped = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, w=560):
         super().__init__(parent)
+        self._w = w
         self.setStyleSheet("background:transparent;border:none;")
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(0, 6, 0, 6)
-        self.start_btn = W.RoundImageButton('start', 'Start', size=110)
-        self.stop_btn = W.RoundImageButton('stop', 'Stop', size=110)
+        lay.setContentsMargins(0, scale(8, w), 0, scale(8, w))
+        sz = scale(ACTION_BTN, w)
+        self.start_btn = W.RoundImageButton('start', 'Start', size=sz)
+        self.stop_btn = W.RoundImageButton('stop', 'Stop', size=sz)
         self.start_btn.clicked.connect(self.started.emit)
         self.stop_btn.clicked.connect(self.stopped.emit)
         lay.addStretch(1)
         lay.addWidget(self.start_btn)
-        lay.addSpacing(30)
+        lay.addSpacing(scale(ACTION_GAP, w))
         lay.addWidget(self.stop_btn)
         lay.addStretch(1)
 
@@ -42,14 +60,18 @@ class BaseScreen(QWidget):
         self.chan = chan
         self.setWindowTitle(title)
         self.setStyleSheet("background:#FAFAFA;border:none;")
+        w = _screen_w(self)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
+        # GrPropertyView header: red bold 16dip title (common_sub_titlebar)
         head = QLabel(f'{title} — Channel {chan}')
-        f = QFont(); f.setPointSize(13); f.setBold(True)
+        f = QFont(); f.setPixelSize(scale(20, w)); f.setBold(True)
         head.setFont(f)
-        head.setStyleSheet("color:#333;background:#F5F5F5;padding:8px 16px;border-bottom:1px solid #DDD;")
+        head.setStyleSheet(
+            "color:#FF330000;background:#FFE0E0E0;"
+            f"padding:{scale(6, w)}px {scale(20, w)}px;")
         head.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         lay.addWidget(head)
 

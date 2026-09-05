@@ -34,10 +34,10 @@ from main_window import MainView, FUNC_TITLE
 class App(QWidget):
     """Owns: status bar, protocol client, intro + main view."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, size=(560, 880)):
         super().__init__(parent)
         self.setWindowTitle('Charger Link')
-        self.setFixedSize(560, 880)
+        self.setFixedSize(*size)
         self.setStyleSheet('background:#FAFAFA;')
 
         logf = os.path.join(HERE, 'chargerlink.log')
@@ -118,9 +118,17 @@ def main():
     if '--screenshot' in sys.argv:
         import screenshots
         sys.exit(screenshots.run())
+    size = (560, 880)
+    if '--size' in sys.argv:
+        try:
+            w, h = sys.argv[sys.argv.index('--size') + 1].split('x')
+            size = (int(w), int(h))
+        except (ValueError, IndexError):
+            print('bad --size, expected WxH e.g. 392x696')
+            sys.exit(2)
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    w = App()
+    w = App(size=size)
     w.show()
     sys.exit(app.exec())
 
