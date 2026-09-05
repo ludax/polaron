@@ -52,6 +52,7 @@ class IconButton(QPushButton):
         self._pressed = A.pressed_pixmap(key, size, size)
         self._key = key
         self._label = label
+        self._down = False
         self.setFlat(True)
         self.setCursor(QCursor(Qt.PointingHandCursor))
         self.setFixedSize(size, size)
@@ -69,9 +70,13 @@ class IconButton(QPushButton):
         from PySide6.QtCore import QEvent
         t = e.type()
         if t == QEvent.Type.MouseButtonPress:
+            self._down = True
             self.setIcon(self._pressed)
-        elif t in (QEvent.Type.MouseButtonRelease, QEvent.Type.Leave):
-            if not self.pressed():
+        elif t == QEvent.Type.MouseButtonRelease:
+            self._down = False
+            self._set_normal()
+        elif t == QEvent.Type.Leave:
+            if not self._down:
                 self._set_normal()
         return super().event(e)
 
@@ -90,6 +95,7 @@ class RoundImageButton(QPushButton):
         self._normal = A.pixmap(key, size, size)
         self._pressed = A.pressed_pixmap(key, size, size)
         self._base = size
+        self._down = False
         self.setIconSize(QSize(size - 16, size - 16))
         self.setIcon(self._normal)
         self.setStyleSheet("QPushButton{border:none;background:transparent;}")
@@ -105,9 +111,13 @@ class RoundImageButton(QPushButton):
         from PySide6.QtCore import QEvent
         t = e.type()
         if t == QEvent.Type.MouseButtonPress:
+            self._down = True
             self.setIcon(self._pressed)
-        elif t in (QEvent.Type.MouseButtonRelease, QEvent.Type.Leave):
-            if not self.pressed():
+        elif t == QEvent.Type.MouseButtonRelease:
+            self._down = False
+            self.setIcon(self._normal)
+        elif t == QEvent.Type.Leave:
+            if not self._down:
                 self.setIcon(self._normal)
         return super().event(e)
 
